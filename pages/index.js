@@ -17,7 +17,8 @@ export default function Home() {
   const [error, setError] = React.useState({error: false, errorMessage: null})
   const [isLoading, setIsLoading] = React.useState(false);
   const [propertyCode, setPropertyCode] = React.useState(null);
-  const {query} = useRouter();
+  const router = useRouter();
+  const {query} = router;
 
   //set the building code in the state.  This will be passed to the Walk-In form so that it can pre-fill the building
   React.useEffect(() => {
@@ -137,6 +138,34 @@ export default function Home() {
 
   }, [qualifyForm]);
 
+  //Walk-in form has been updated
+  React.useEffect(() => {
+
+    if (walkInForm.walkInComplete || !walkInForm.result) {
+      return;
+    }
+
+    setIsLoading(true);
+    const postData = {
+      ...basicForm,
+      ...qualifyForm,
+      ...walkInForm
+    }
+    axios.post('/api/walkin-submit', postData)
+      .then(res => {
+        setWalkInForm({
+          ...walkInForm,
+          walkInComplete: true,
+        })
+        setIsLoading(true);
+        router.push('/thank-you');
+      })
+      .catch(error => {
+        setIsLoading(false);
+      })
+
+  }, [walkInForm])
+
   //content for the Wizard
   const WizardContent = ({title, descriptionText, disclaimerText}) => {
     return (
@@ -180,6 +209,15 @@ export default function Home() {
       })
     }
   }
+  const handlePreferenceUpdate = (event) => {
+    if (event && event.preventDefault) {
+      event.preventDefault();
+    }
+    setWizardState({
+      ...wizardState,
+      view: 'qualify'
+    })
+  }
 
   //rendering the wizard
   const Wizard = () => {
@@ -216,8 +254,18 @@ export default function Home() {
     //walk-in form options
     const walkInOptions = {
       showBack: true,
-      handleBackButton: handleWalkInBack
+      handleBackButton: handleWalkInBack,
+      buttonText: 'Submit',
+      title: 'Walk-In Details',
+      descriptionText: 'Please select the property and suite(s) you will be viewing today.',
+      formHolderClasses: 'none',
+      availableSuiteHolderClasses: 'mt-4 grid grid-cols-1 2xl:grid-cols-2 gap-y-6 lg:gap-x-4',
+      preferences,
+      showUpdatePrefsBanner: true,
+      handleUpdatePrefs: handlePreferenceUpdate
     }
+
+    console.log(walkInOptions)
 
     switch (wizardState.view) {
       case 'basic':
@@ -237,7 +285,8 @@ export default function Home() {
       case 'walk-in':
         return (
           <>
-            <WalkIn options={walkInOptions} />
+            <WizardContent {...walkInOptions} />
+            <WalkIn options={walkInOptions} stateSetter={setWalkInForm} propertyCode={propertyCode} />
           </>
         )
     }
@@ -246,8 +295,6 @@ export default function Home() {
 
   return (
     <main>
-
-      <LoadingWidget isLoading={isLoading} />
 
       {/*Hero Image*/}
       <section className="absolute top-0 h-44 w-full">
@@ -264,7 +311,10 @@ export default function Home() {
               Walk-in Form
             </h1>
             <p className="mt-6 max-w-3xl mx-auto text-xl leading-normal text-gray-500 text-center">
-              Thank you for your interest in Hollyburn Properties.  Please fill out our Walk-In form to ensure you are qualified
+              Thank you for your interest in Hollyburn Properties.
+            </p>
+            <p className="mt-6 max-w-3xl mx-auto text-xl leading-normal text-gray-500 text-center">
+              Please fill out our Walk-In form to ensure you are qualified
               in our system and, optionally, to receive an application form if you would like to apply.
             </p>
             <div className="mt-6 max-w-3xl mx-auto leading-normal text-gray-500 text-center">
@@ -282,6 +332,9 @@ export default function Home() {
 
         {/*Top of Wizard*/}
         <Element name="wizard-top"></Element>
+
+        {/*Loading Widget*/}
+        <LoadingWidget isLoading={isLoading} />
 
         {/*right side image*/}
         <div className="lg:absolute lg:inset-0">
