@@ -166,6 +166,20 @@ export default function Home() {
       view: 'basic'
     })
   }
+  const handleWalkInBack = () => {
+    if (qualifyForm.result) {
+      setWizardState({
+        ...wizardState,
+        view: 'qualify'
+      })
+    }
+    else {
+      setWizardState({
+        ...wizardState,
+        view: 'basic'
+      })
+    }
+  }
 
   //rendering the wizard
   const Wizard = () => {
@@ -199,6 +213,12 @@ export default function Home() {
       descriptionText: 'It looks like you aren\'t in our system yet or we are missing some important information.  Please complete our qualification form so that we can show you the suites that match your preferences.'
     }
 
+    //walk-in form options
+    const walkInOptions = {
+      showBack: true,
+      handleBackButton: handleWalkInBack
+    }
+
     switch (wizardState.view) {
       case 'basic':
         return (
@@ -217,7 +237,7 @@ export default function Home() {
       case 'walk-in':
         return (
           <>
-            <WalkIn />
+            <WalkIn options={walkInOptions} />
           </>
         )
     }
