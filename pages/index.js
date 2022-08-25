@@ -1,12 +1,15 @@
 import React from "react";
 import {useRouter} from "next/router";
-import {LoadingWidget, BasicForm, QualifyForm, WalkIn, NeedAssistance} from "hollyburn-lib";
+import {LoadingWidget, BasicForm, QualifyForm, WalkIn, NeedAssistance, ErrorMessage} from "hollyburn-lib";
 import '../node_modules/react-datepicker/dist/react-datepicker.css';
 import axios from "axios";
 import {Element, scroller, animateScroll as scroll} from 'react-scroll'
 import {scrollToWizardTop} from "../lib/helpers";
+import AppContext from "../lib/appContext";
 
 export default function Home() {
+
+  const context = React.useContext(AppContext);
 
   const [basicForm, setBasicForm] = React.useState({result: false});
   const [qualifyForm, setQualifyForm] = React.useState({result: false});
@@ -97,7 +100,8 @@ export default function Home() {
       })
       .catch(error => {
         console.log(error);
-        setBasicForm({... basicForm, result: false})
+        setBasicForm({...basicForm, result: false})
+        console.log(error.response.data.errorMessage);
         setError({
           error: true,
           errorMessage: error.response?.data?.errorMessage || "There was an error.  Please ensure the email address entered is valid and does not contain any special characters."
@@ -118,6 +122,9 @@ export default function Home() {
     const {formSubmissionId} = qualifyForm;
     if (formSubmissionId) {
       //if the view is being manually set remove it
+      setError({
+        error: false
+      })
       setWizardState({
         ...wizardState,
         view: 'walk-in'
@@ -147,9 +154,8 @@ export default function Home() {
 
     setIsLoading(true);
     const postData = {
-      ...basicForm,
-      ...qualifyForm,
-      ...walkInForm
+      formCompleted: true,
+      basicForm, qualifyForm, walkInForm
     }
     axios.post('/api/walkin-submit', postData)
       .then(res => {
@@ -158,10 +164,18 @@ export default function Home() {
           walkInComplete: true,
         })
         setIsLoading(true);
+        setError({
+          error: false
+        })
+        context.setSession(postData);
         router.push('/thank-you');
       })
       .catch(error => {
         setIsLoading(false);
+        setError({
+          error: true,
+          errorMessage: error.response?.data?.errorMessage || 'Unknown error occurred.  Please try again.'
+        })
       })
 
   }, [walkInForm])
@@ -265,14 +279,16 @@ export default function Home() {
       handleUpdatePrefs: handlePreferenceUpdate
     }
 
-    console.log(walkInOptions)
-
+    //render state
     switch (wizardState.view) {
       case 'basic':
         return (
           <>
             <WizardContent {...basicOptions} />
             <BasicForm stateSetter={setBasicForm} options={basicOptions} {...basicForm} />
+            {
+              error.error && error.errorMessage && <ErrorMessage errorMessage={error.errorMessage} />
+            }
           </>
         )
       case 'qualify':
@@ -280,6 +296,9 @@ export default function Home() {
           <>
             <WizardContent {...qualifyOptions} />
             <QualifyForm options={qualifyOptions} stateSetter={setQualifyForm} {...preferences} />
+            {
+                error.error && error.errorMessage && <ErrorMessage errorMessage={error.errorMessage} />
+            }
           </>
         )
       case 'walk-in':
@@ -287,6 +306,9 @@ export default function Home() {
           <>
             <WizardContent {...walkInOptions} />
             <WalkIn options={walkInOptions} stateSetter={setWalkInForm} propertyCode={propertyCode} />
+            {
+                error.error && error.errorMessage && <ErrorMessage errorMessage={error.errorMessage} />
+            }
           </>
         )
     }

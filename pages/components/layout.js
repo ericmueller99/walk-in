@@ -5,7 +5,7 @@ export default function Layout({children}) {
   return (
     <>
       <Head>
-        <title>Hollyburn Properties - Book A Viewing</title>
+        <title>Hollyburn Properties - Walk-in</title>
         <meta name="viewport" content="initial-scale=1.0, width=device-width" />
       </Head>
       <Header showMenu={true} />
