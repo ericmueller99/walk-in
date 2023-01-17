@@ -9,8 +9,6 @@ export default function handler(req,res) {
     return;
   }
 
-  console.log(req.body);
-
   const {basicForm, qualifyForm, walkInForm} = req.body;
   const {emailAddress, firstName, lastName, phoneNumber} = basicForm;
   const {loginUrl, username, password, connectionType} = salesforceConnection();
@@ -33,7 +31,8 @@ export default function handler(req,res) {
       basicForm.neighbourhoods.join(';') : null,
     Related_Vacancy_Ids__c: vacancyIds.join(';'),
     Converts_Lead__c: true,
-    Property_HMY__c: walkInForm.property
+    Property_HMY__c: walkInForm.property,
+    Sends_Application__c: true
   }
 
   //insert into Salesforce

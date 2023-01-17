@@ -1,9 +1,29 @@
+FROM ubuntu as intermediate
+
+# install git
+RUN apt-get update
+RUN apt-get install -y git
+
+# add credentials on build
+ARG SSH_PRIVATE_KEY
+RUN mkdir /root/.ssh/
+RUN echo "${SSH_PRIVATE_KEY}" > /root/.ssh/id_rsa
+
+# make sure your domain is accepted
+RUN touch /root/.ssh/known_hosts
+RUN ssh-keyscan github.com >> /root/.ssh/known_hosts
+
+RUN git clone git@github.com:ericmueller99/salesforce-connect.git
+
 FROM node:16-alpine AS deps
 RUN apk add --no-cache libc6-compat
 RUN apk --no-cache add --virtual .builds-deps build-base python3
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
+
+# copy the repository form the previous image
+COPY --from=intermediate /ericmueller99/salesforce-connect /srv/salesforce-connect
 
 # Rebuild the source code only when needed
 FROM node:16-alpine AS builder
