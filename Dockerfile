@@ -8,11 +8,11 @@ RUN apk add git openssh-client
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-#COPY salesforce-connect-deploy .
-#RUN chmod 600 salesforce-connect-deploy
+COPY salesforce-connect-deploy .
+RUN chmod 600 salesforce-connect-deploy
 RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
-#RUN ssh-agent sh -c 'ssh-add salesforce-connect-deploy && ssh-keyscan -H github.com >> /etc/ssh/ssh_known_hosts ; npm ci'
-RUN ssh-agent sh -c 'echo $SSH_PRIVATE | base64 -d | ssh-add - ; npm ci'
+RUN ssh-agent sh -c 'ssh-add salesforce-connect-deploy && ssh-keyscan -H github.com >> /etc/ssh/ssh_known_hosts ; npm ci'
+#RUN ssh-agent sh -c 'echo $SSH_PRIVATE | base64 -d | ssh-add - ; npm ci'
 
 #RUN npm install
 
