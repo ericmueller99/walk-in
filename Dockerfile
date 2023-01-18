@@ -1,6 +1,6 @@
 FROM node:16-alpine AS deps
 
-ARG SSH_KEY
+ARG SSH_PRIVATE
 RUN apk add --no-cache libc6-compat
 RUN apk --no-cache add --virtual .builds-deps build-base python3
 RUN apk add git openssh-client
@@ -12,7 +12,7 @@ COPY package.json package-lock.json ./
 #RUN chmod 600 salesforce-connect-deploy
 RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 #RUN ssh-agent sh -c 'ssh-add salesforce-connect-deploy && ssh-keyscan -H github.com >> /etc/ssh/ssh_known_hosts ; npm ci'
-RUN ssh-agent sh -c 'echo $SSH_KEY | base64 -d | ssh-add - ; npm ci'
+RUN ssh-agent sh -c 'echo $SSH_PRIVATE | base64 -d | ssh-add - ; npm ci'
 
 #RUN npm install
 
