@@ -19,7 +19,7 @@
     "react-datepicker": "^4.8.0",
     "react-dom": "18.2.0",
     "react-scroll": "^1.8.7",
-    "salesforce-connect": "github:ericmueller99/salesforce-connect"
+    "salesforce-connect": "git+ssh://git@github.com:ericmueller99/salesforce-connect"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.8",

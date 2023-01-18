@@ -1,32 +1,24 @@
-FROM ubuntu as intermediate
-
-# install git
-RUN apt-get update
-RUN apt-get install -y git
-
-# add credentials on build
-ARG SSH_PRIVATE_KEY
-RUN mkdir /root/.ssh/
-RUN echo "${SSH_PRIVATE_KEY}" > /root/.ssh/id_rsa
-
-# make sure your domain is accepted
-RUN touch /root/.ssh/known_hosts
-RUN ssh-keyscan github.com >> /root/.ssh/known_hosts
-
-RUN git clone git@github.com:ericmueller99/salesforce-connect.git
-
 FROM node:16-alpine AS deps
+
+ARG SSH_KEY
 RUN apk add --no-cache libc6-compat
 RUN apk --no-cache add --virtual .builds-deps build-base python3
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+RUN apk add git openssh-client
 
-# copy the repository form the previous image
-COPY --from=intermediate /ericmueller99/salesforce-connect /srv/salesforce-connect
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+#COPY salesforce-connect-deploy .
+#RUN chmod 600 salesforce-connect-deploy
+RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+#RUN ssh-agent sh -c 'ssh-add salesforce-connect-deploy && ssh-keyscan -H github.com >> /etc/ssh/ssh_known_hosts ; npm ci'
+RUN ssh-agent sh -c 'echo $SSH_KEY | base64 -d | ssh-add - ; npm ci'
+
+#RUN npm install
 
 # Rebuild the source code only when needed
 FROM node:16-alpine AS builder
+
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
