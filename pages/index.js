@@ -33,17 +33,17 @@ export default function Home() {
   //basic form has been updated
   React.useEffect(() => {
 
-    //if there was a match, but firstName, lastName, or PhoneNumber didnt match what the lead typed in then update Salesforce to match
+    //if there was a match, but firstName, lastName, or PhoneNumber didnt match what the lead typed in then update the lead to match
     if (!basicForm.primaryFieldsMatch && basicForm.primaryFieldsMatch === false && basicForm.recordType) {
       console.log('updating leads firstName, lastName, and phone to match');
       setBasicForm({
         ...basicForm,
         primaryFieldsMatch: true
       })
-      //updating Salesforce with the new firstName, lastName, and phoneNumber
+      //updating the lead with the new firstName, lastName, and phoneNumber
       axios.post('/api/update-lead', {basicForm})
         .catch(error => {
-          console.log('Unable to update lead from basicForm.  Salesforce returned an error.');
+          console.log('Unable to update lead from basicForm.');
           console.log(error);
         })
     }
@@ -60,10 +60,10 @@ export default function Home() {
     //show loading window.
     setIsLoading(true);
 
-    //submitting the step 1 wizard to the handler.  This will check if the user is qualified already in Salesforce and return the data.
+    //submitting the step 1 wizard to the handler.  This will look up the lead and return the data.
     axios.post('/api/basic-submit', basicForm)
       .then(res => {
-        const {FirstName: firstName, LastName: lastName, Email: emailAddress, Phone: phoneNumber, isQualified, invalidFields, Preference__c: preferences = {}, recordType, Id: recordId} = res.data;
+        const {FirstName: firstName, LastName: lastName, Email: emailAddress, Phone: phoneNumber, isQualified, invalidFields, Preference__c: preferences = {}, recordType, Id: recordId, leadCode} = res.data;
         const {Suite_Type__c: suiteTypes, Maximum_Budget__c: maxBudget, Desired_Move_In_Date__c: moveIn, Number_of_Occupants__c: numberOfOccupants, City__c: cities,
           Neighbourhood__c: neighbourhoods, Pet_Friendly__c: petFriendly = false} = preferences || {};
         const primaryFieldsMatch = (firstName === basicForm.firstName  && lastName === basicForm.lastName && phoneNumber === basicForm.phoneNumber);
@@ -76,6 +76,8 @@ export default function Home() {
           checkComplete: true,
           isQualified: isQualified ? isQualified : false,
           recordType, recordId,
+          leadCode: leadCode || recordId,
+          Id: recordId,
           //taking the basic information from step 1
           firstName: basicForm.firstName,
           lastName: basicForm.lastName,

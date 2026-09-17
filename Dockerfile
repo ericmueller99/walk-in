@@ -1,20 +1,12 @@
+# syntax=docker/dockerfile:1
 FROM node:16-alpine AS deps
-
-ARG SSH_PRIVATE
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat git
 RUN apk --no-cache add --virtual .builds-deps build-base python3
-RUN apk add git openssh-client
-
+RUN git config --global url."https://github.com/".insteadOf "ssh://git@github.com/" \
+ && git config --global --add url."https://github.com/".insteadOf "git@github.com:"
 WORKDIR /app
-
 COPY package.json package-lock.json ./
-COPY salesforce-connect-deploy .
-RUN chmod 600 salesforce-connect-deploy
-RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
-RUN ssh-agent sh -c 'ssh-add salesforce-connect-deploy && ssh-keyscan -H github.com >> /etc/ssh/ssh_known_hosts ; npm ci'
-#RUN ssh-agent sh -c 'echo $SSH_PRIVATE | base64 -d | ssh-add - ; npm ci'
-
-#RUN npm install
+RUN npm ci
 
 # Rebuild the source code only when needed
 FROM node:16-alpine AS builder
