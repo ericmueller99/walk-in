@@ -1,5 +1,14 @@
-import {salesforceConnection} from "../../lib/helpers";
-import {Salesforce} from 'salesforce-connect';
+import {hollyburnApi, apiErrorMessage} from "../../lib/hollyburn-api";
+
+function coercePetFriendly(value) {
+  if (value === true || value === 1) return true;
+  if (typeof value === 'number' && Number.isFinite(value)) return value === 1;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return normalized === 'true' || normalized === 'yes' || normalized === '1';
+  }
+  return false;
+}
 
 export default function handler(req,res) {
 
@@ -18,65 +27,52 @@ export default function handler(req,res) {
     return;
   }
 
-  console.log(req.body);
+  const petFriendlyBool = coercePetFriendly(petFriendly);
+  const occupants = parseInt(numberOfOccupants, 10);
 
-  try {
-    const {username, password, loginUrl, connectionType} = salesforceConnection();
-    const connection = {username, password, loginUrl}
-    const salesforceData = {
-      First_Name__c: firstName,
-      Last_Name__c: lastName,
-      Email__c: emailAddress,
-      Phone__c: phoneNumber,
-      Desired_Move_In_Date__c: moveIn,
-      Suite_Type__c: suiteTypes.toString().replace(/,/g, ';'),
-      Number_Of_Occupants__c: numberOfOccupants,
-      Maximum_Budget__c: maxBudget,
-      utm_campaign__c: utmCampaign ? utmCampaign : null,
-      utm_content__c: utmContent ? utmContent : null,
-      utm_Medium__c : utmMedium ? utmMedium : null,
-      utm_Source__c: utmSource ? utmSource : null,
-      utm_term__c: utmTerm ? utmTerm: null,
-      Pet_Friendly__c: petFriendly,
-      Lead_Source__c: 'Form Submission',
-      Lead_Source_Detail__c: 'ILS Qualification',
-      City_Preference__c: cities.toString().replace(/,/g, ';'),
-      Neighbourhood__c: neighbourhoods ? neighbourhoods.toString().replace(/,/g, ';') : null,
-      Update_Preference__c: true
-    }
-    console.log(salesforceData);
-    const salesforce = new Salesforce(connectionType, connection);
-    salesforce.insertSingleRecord('Form_Submission__c', salesforceData)
-      .then((data) => {
-        console.log('done!');
-        console.log(data);
-        res.status(200).json({
-          result: true,
-          data
-        })
-      })
-      .catch(error => {
-        console.log('error!');
-        console.log(error);
-        if (error instanceof Error) {
-          res.status(500).json({
-            result: false,
-            errorMessage: error.message,
-          })
-        }
-        else {
-          res.status(500).json({
-            result: false,
-            errorMessage: error
-          })
-        }
-      })
-  }
-  catch (error) {
-    res.status(500).json({
-      result: false,
-      errorMessage: error.message
+  hollyburnApi()
+    .post('/leads/qualification-form', {
+      firstName,
+      lastName,
+      emailAddress,
+      phoneNumber,
+      suiteTypes,
+      maxBudget,
+      moveIn,
+      petFriendly: petFriendlyBool,
+      numberOfOccupants: Number.isFinite(occupants) ? occupants : numberOfOccupants,
+      utmCampaign,
+      utmSource,
+      utmMedium,
+      utmContent,
+      utmTerm,
+      cities,
+      neighbourhoods,
+      leadSource: 'Form Submission',
+      leadSourceDetail: 'ILS Qualification'
     })
-  }
+    .then(response => {
+      const data = response.data || {};
+      //QualifyForm reads res.data.data.id and only then marks the step complete, so the
+      //id has to be inside data. Falling back to the API's local form_submissions id
+      //means step 2 still advances when hollyburnapi returns no remote form id.
+      res.status(200).json({
+        result: true,
+        data: {
+          ...data,
+          id: data.id || data.formSubmissionId || null
+        },
+        formSubmissionId: data.id || data.formSubmissionId || 'local',
+        id: data.id || data.formSubmissionId || null,
+        inquiryId: data.inquiryId || null
+      });
+    })
+    .catch(error => {
+      console.log(error);
+      res.status(500).json({
+        result: false,
+        errorMessage: apiErrorMessage(error)
+      });
+    });
 
 }

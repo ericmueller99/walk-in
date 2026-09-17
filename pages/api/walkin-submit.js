@@ -1,5 +1,4 @@
-import {salesforceConnection} from "../../lib/helpers";
-import {Salesforce} from 'salesforce-connect';
+import {hollyburnApi, apiErrorMessage} from "../../lib/hollyburn-api";
 
 export default function handler(req,res) {
 
@@ -11,46 +10,46 @@ export default function handler(req,res) {
 
   const {basicForm, qualifyForm, walkInForm} = req.body;
   const {emailAddress, firstName, lastName, phoneNumber} = basicForm;
-  const {loginUrl, username, password, connectionType} = salesforceConnection();
-  const salesforce = new Salesforce(connectionType, {username, password, loginUrl});
-  const vacancyIds = walkInForm.suites.map(s => s.vacancyId);
-  const formSubmissionDetails = {
-    Lead_Source__c: 'Form Submission',
-    Lead_Source_Detail__c: 'QR Code - Walk-in',
-    First_Name__c: firstName,
-    Last_Name__c: lastName,
-    Email__c: emailAddress,
-    Phone__c: phoneNumber,
-    Desired_Move_In_Date__c: qualifyForm.moveIn ? qualifyForm.moveIn : basicForm.moveIn,
-    Suite_Type__c: qualifyForm.suiteTypes ? qualifyForm.suiteTypes.join(';') : basicForm.suiteTypes.join(';'),
-    Number_of_Occupants__c: qualifyForm.numberOfOccupants ? qualifyForm.numberOfOccupants : basicForm.numberOfOccupants,
-    Maximum_Budget__c: qualifyForm.maxBudget ? qualifyForm.maxBudget : basicForm.maxBudget,
-    Pet_Friendly__c: qualifyForm.petFriendly ? true : !!basicForm.petFriendly,
-    City_Preference__c: qualifyForm.cities && qualifyForm.cities.length > 0 ? qualifyForm.cities.join(';') : basicForm.cities && basicForm.cities.length > 0 ? basicForm.cities.join(';') : null,
-    Neighbourhood__c: qualifyForm.neighbourhoods && qualifyForm.neighbourhoods.length > 0 ? qualifyForm.neighbourhoods.join(';') : basicForm.neighbourhoods && basicForm.neighbourhoods.length > 0 ?
-      basicForm.neighbourhoods.join(';') : null,
-    Related_Vacancy_Ids__c: vacancyIds.join(';'),
-    Converts_Lead__c: true,
-    Property_HMY__c: walkInForm.property,
-    Sends_Application__c: true
+
+  let api;
+  try {
+    api = hollyburnApi();
+  } catch (error) {
+    res.status(500).json({
+      result: false,
+      errorMessage: error.message
+    });
+    return;
   }
 
-  //insert into Salesforce
-  salesforce.insertSingleRecord('Form_Submission__c', formSubmissionDetails)
-    .then(formRes => {
-      console.log('done!');
-      console.log(formRes);
+  const vacancySuites = Array.isArray(walkInForm.suites) ? walkInForm.suites : [];
+  api.post('/leads/walk-in', {
+    firstName, lastName, emailAddress, phoneNumber,
+    propertyHmy: walkInForm.property,
+    suites: vacancySuites,
+    preferences: {
+      moveIn: qualifyForm.moveIn || basicForm.moveIn,
+      suiteTypes: qualifyForm.suiteTypes || basicForm.suiteTypes,
+      maxBudget: qualifyForm.maxBudget || basicForm.maxBudget,
+      numberOfOccupants: qualifyForm.numberOfOccupants || basicForm.numberOfOccupants,
+      petFriendly: qualifyForm.petFriendly ? true : !!basicForm.petFriendly,
+      cities: (qualifyForm.cities && qualifyForm.cities.length) ? qualifyForm.cities : basicForm.cities,
+      neighbourhoods: qualifyForm.neighbourhoods && qualifyForm.neighbourhoods.length
+        ? qualifyForm.neighbourhoods : basicForm.neighbourhoods
+    }
+  })
+    .then(response => {
       res.status(200).json({
         result: true,
-        data: formRes
-      })
+        data: response.data
+      });
     })
     .catch(error => {
       console.log(error);
       res.status(500).json({
         result: false,
-        errorMessage: error.message || 'unknown internal error'
-      })
+        errorMessage: apiErrorMessage(error)
+      });
     });
 
 }

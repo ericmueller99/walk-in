@@ -1,5 +1,4 @@
-import {Salesforce} from 'salesforce-connect';
-import {salesforceConnection} from "../../lib/helpers";
+import {hollyburnApi, apiErrorMessage} from "../../lib/hollyburn-api";
 
 export default function handler(req,res) {
 
@@ -19,34 +18,31 @@ export default function handler(req,res) {
     return;
   }
 
-  try {
-    const {connectionType, username, password, loginUrl} = salesforceConnection();
-    const connection = {
-      username, password, loginUrl
-    }
-    const salesforce = new Salesforce(connectionType, connection);
-    salesforce.getLeadOrContact(emailAddress)
-      .then(leadOrContact => {
-        console.log(leadOrContact);
-        res.status(200).json({
-          result: true,
-          ...leadOrContact
-        });
-      })
-      .catch(error => {
-        console.log(error);
-        res.status(500).json({
-          result: false,
-          errorMessage: error.message || "Service integration error.  Unable to get Salesforce data"
-        })
-      })
-  }
-  catch (error) {
-    console.log(error);
-    res.status(500).json({
-      result:false,
-      errorMessage: error.message || 'Unknown system error.  Please try again.'
+  hollyburnApi()
+    .post('/leads/lookup', { emailAddress, phoneNumber })
+    .then(response => {
+      const found = response.data || {};
+      res.status(200).json({
+        result: true,
+        FirstName: found.firstName || firstName,
+        LastName: found.lastName || lastName,
+        Email: found.emailAddress || emailAddress,
+        Phone: found.phoneNumber || phoneNumber,
+        isQualified: false,
+        invalidFields: [],
+        Preference__c: {},
+        recordType: found.leadCode ? 'Lead' : null,
+        Id: found.leadCode || null,
+        leadCode: found.leadCode || null,
+        inquiryId: found.inquiryId || null
+      });
     })
-  }
+    .catch(error => {
+      console.log(error);
+      res.status(500).json({
+        result: false,
+        errorMessage: apiErrorMessage(error, "Service integration error. Unable to look up this email.")
+      });
+    });
 
 }
