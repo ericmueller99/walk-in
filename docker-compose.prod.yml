@@ -1,0 +1,65 @@
+# Production stack for walk-in on the Hollyburn docker host (216.128.182.35).
+#
+# Deployed to /root/apps/walk-in/docker-compose.yml by `make deploy`, which also
+# uploads .env.production alongside it. The image is built locally and streamed
+# in over SSH, so there is no `build:` section here and the server never pulls
+# from Docker Hub.
+#
+# The static IP is the point of this file living in its own compose project:
+# nginx-proxy-manager forwards to 10.10.0.6, so the container has to land on
+# that exact address on every deploy.
+
+services:
+  walk-in:
+    image: hollyburnproperties/walk-in:latest
+    container_name: walk-in
+    restart: unless-stopped
+
+    # The image is loaded from a tarball by `make deploy`, never pulled. Without
+    # this, a tag that failed to ship sends compose to Docker Hub, where the
+    # repository does not exist.
+    pull_policy: never
+
+    # .env.production is also baked into the image (see Dockerfile); this makes
+    # it the live source of truth so config changes do not need a rebuild.
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      PORT: 3004
+      HOSTNAME: 0.0.0.0
+
+    ports:
+      - "3004:3004"
+
+    # (memswap_limit omitted: this host's kernel has no swap-limit cgroup support)
+    mem_limit: 1g
+
+    # The app has no /health route -- pages/api holds only the three submit
+    # routes -- so probe the root document instead. curl is not present in the
+    # node:18-alpine runtime image, so the probe goes through node.
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('http').get('http://127.0.0.1:3004/',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+    networks:
+      custom_bridge:
+        ipv4_address: 10.10.0.6
+
+networks:
+  custom_bridge:
+    external: true
+    name: "custom bridge"

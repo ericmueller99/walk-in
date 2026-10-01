@@ -1,1 +1,24 @@
+.git
+.gitignore
+.github
 node_modules
+.next
+out
+.idea
+.vscode
+.DS_Store
+**/.DS_Store
+npm-debug.log*
+Makefile
+scripts
+docker-compose*.yml
+README.md
+
+# NOTE: .env.production is deliberately NOT ignored - the build requires it.
+.env.local
+.env*.local
+.env.local.backup
+
+# The SSH deploy key the old Dockerfile needed. Unused now (the git deps are
+# fetched over HTTPS), but never let one into the build context by accident.
+salesforce-connect-deploy
