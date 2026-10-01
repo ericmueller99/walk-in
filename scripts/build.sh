@@ -22,13 +22,6 @@ LOCAL_ENV="${LOCAL_ENV:-.env.production}"
   exit 1
 }
 
-# The old Dockerfile needed this key to fetch salesforce-connect over SSH. The
-# git deps are public and now come over HTTPS, so a stale key lying around is
-# only a way to leak it into a build context.
-if [ -f salesforce-connect-deploy ]; then
-  echo "   note: salesforce-connect-deploy is present but no longer used (and is .dockerignored)"
-fi
-
 echo "==> Building ${IMAGE}:${TAG} for ${PLATFORM}"
 
 # --provenance/--sbom off: attestations turn the result into a manifest list,

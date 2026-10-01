@@ -19,6 +19,5 @@ README.md
 .env*.local
 .env.local.backup
 
-# The SSH deploy key the old Dockerfile needed. Unused now (the git deps are
-# fetched over HTTPS), but never let one into the build context by accident.
-salesforce-connect-deploy
+# Unused SSH deploy key from an older image. Never copy it into the build context.
+*-connect-deploy

@@ -34,7 +34,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-salesforce-connect-deploy
+# Unused SSH deploy key from an older image.
+*-connect-deploy
 # deploy
 .env.production
 .deploy/

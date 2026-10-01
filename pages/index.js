@@ -33,21 +33,6 @@ export default function Home() {
   //basic form has been updated
   React.useEffect(() => {
 
-    //if there was a match, but firstName, lastName, or PhoneNumber didnt match what the lead typed in then update Salesforce to match
-    if (!basicForm.primaryFieldsMatch && basicForm.primaryFieldsMatch === false && basicForm.recordType) {
-      console.log('updating leads firstName, lastName, and phone to match');
-      setBasicForm({
-        ...basicForm,
-        primaryFieldsMatch: true
-      })
-      //updating Salesforce with the new firstName, lastName, and phoneNumber
-      axios.post('/api/update-lead', {basicForm})
-        .catch(error => {
-          console.log('Unable to update lead from basicForm.  Salesforce returned an error.');
-          console.log(error);
-        })
-    }
-
     //if the form is not complete yet then do not proceed
     if (!basicForm.result) {
       return;
@@ -60,7 +45,7 @@ export default function Home() {
     //show loading window.
     setIsLoading(true);
 
-    //submitting the step 1 wizard to the handler.  This will check if the user is qualified already in Salesforce and return the data.
+    //submitting the step 1 wizard to the handler.  This will check if the user is qualified already and return the data.
     axios.post('/api/basic-submit', basicForm)
       .then(res => {
         const {FirstName: firstName, LastName: lastName, Email: emailAddress, Phone: phoneNumber, isQualified, invalidFields, Preference__c: preferences = {}, recordType, Id: recordId} = res.data;

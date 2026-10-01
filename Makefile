@@ -27,10 +27,10 @@ LOCAL_COMPOSE := docker-compose.prod.yml
 LOCAL_ENV     := .env.production
 PLATFORM      := linux/amd64
 
-# Keys lib/helpers.js requires before it will talk to Salesforce. Missing any
-# of them makes every /api/*-submit route throw at runtime, so the build stops
-# rather than shipping an app whose forms cannot submit.
-REQUIRED_KEYS := SALESFORCE_USERNAME SALESFORCE_PASSWORD SALESFORCE_LOGINURL SALESFORCE_TYPE
+# The submit routes call Hollyburn API with this key. Missing it makes every
+# /api/*-submit route throw at runtime, so the build stops rather than shipping
+# an app whose forms cannot submit. HOLLYBURN_API_BASE_URL is optional.
+REQUIRED_KEYS := HOLLYBURN_API_KEY
 
 # Tag = short commit sha, plus -dirty when the tree has uncommitted changes.
 GIT_SHA  := $(shell git rev-parse --short HEAD 2>/dev/null || echo nogit)
@@ -57,11 +57,8 @@ help: ## Show this help
 check-env: ## Verify .env.production exists and has the keys the app needs
 	@test -f $(LOCAL_ENV) || { \
 	  echo "!! $(LOCAL_ENV) not found."; \
-	  echo "   It is not in git. Create it with the keys lib/helpers.js reads:"; \
-	  echo "     $(REQUIRED_KEYS)"; \
-	  echo "   (SALESFORCE_TYPE must be exactly 'sandbox' or 'production'.)"; \
-	  echo "   Carry over DB_RESIDENTPORTAL_LIVE_*, HOLLYBURN_API_KEY and"; \
-	  echo "   SALESFORCE_CLIENT_* from .env.local as well - hollyburn-lib uses them."; \
+	  echo "   It is not in git. Create it with HOLLYBURN_API_KEY set to an api_users row."; \
+	  echo "   HOLLYBURN_API_BASE_URL is optional and defaults to https://api.hollyburn.com."; \
 	  exit 1; }
 	@missing=""; \
 	for k in $(REQUIRED_KEYS); do \
@@ -70,13 +67,7 @@ check-env: ## Verify .env.production exists and has the keys the app needs
 	done; \
 	if [ -n "$$missing" ]; then \
 	  echo "!! $(LOCAL_ENV) is missing values for:$$missing"; \
-	  echo "   Note .env.local uses SALESFORCE_PRODUCTION_* names; the code reads"; \
-	  echo "   the unprefixed ones, and needs SALESFORCE_TYPE on top."; \
-	  exit 1; \
-	fi
-	@t=$$(grep -E '^SALESFORCE_TYPE=' $(LOCAL_ENV) | head -1 | cut -d= -f2- | sed -e 's/^["'\'']//' -e 's/["'\'']$$//'); \
-	if [ "$$t" != "sandbox" ] && [ "$$t" != "production" ]; then \
-	  echo "!! SALESFORCE_TYPE is '$$t' - lib/helpers.js accepts only 'sandbox' or 'production'"; \
+	  echo "   HOLLYBURN_API_KEY must be an api_users row. The submit routes read it at runtime."; \
 	  exit 1; \
 	fi
 	@if [ -f .env.local ]; then \
