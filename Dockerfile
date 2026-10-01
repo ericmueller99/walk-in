@@ -3,8 +3,7 @@
 # walk-in production image. Built for linux/amd64 by scripts/build.sh and
 # streamed to the server by scripts/deploy.sh -- never pulled from a registry.
 #
-# Node 18, not 16: jsforce@3.9.1 declares engines {"node": ">=18"}, and .nvmrc
-# already says 18.19.0. Next 12.2.5 is fine on 18.
+# Node 18 to match .nvmrc (18.19.0). Next 12.2.5 is fine on 18.
 
 FROM node:18-alpine AS deps
 RUN apk add --no-cache libc6-compat git
