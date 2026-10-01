@@ -1,7 +1,6 @@
-import {Salesforce} from 'salesforce-connect';
-import {salesforceConnection} from "../../lib/helpers";
+import {post} from "../../lib/hollyburn-api";
 
-export default function handler(req,res) {
+export default async function handler(req, res) {
 
   //only accepting post requests
   if (req.method.toLowerCase() !== 'post') {
@@ -20,32 +19,41 @@ export default function handler(req,res) {
   }
 
   try {
-    const {connectionType, username, password, loginUrl} = salesforceConnection();
-    const connection = {
-      username, password, loginUrl
+    const body = await post('/v2/walk-in/lookup', {emailAddress});
+    if (!body || !body.found) {
+      res.status(200).json({
+        result: true
+      });
+      return;
     }
-    const salesforce = new Salesforce(connectionType, connection);
-    salesforce.getLeadOrContact(emailAddress)
-      .then(leadOrContact => {
-        console.log(leadOrContact);
-        res.status(200).json({
-          result: true,
-          ...leadOrContact
-        });
-      })
-      .catch(error => {
-        console.log(error);
-        res.status(500).json({
-          result: false,
-          errorMessage: error.message || "Service integration error.  Unable to get Salesforce data"
-        })
-      })
+
+    const preferences = body.preferences || {};
+    res.status(200).json({
+      result: true,
+      FirstName: body.firstName,
+      LastName: body.lastName,
+      Email: body.emailAddress,
+      Phone: body.phoneNumber,
+      isQualified: body.isQualified,
+      invalidFields: body.invalidFields,
+      Preference__c: {
+        Suite_Type__c: preferences.suiteTypes ?? null,
+        Maximum_Budget__c: preferences.maxBudget ?? null,
+        Desired_Move_In_Date__c: preferences.moveIn ?? null,
+        Number_of_Occupants__c: preferences.numberOfOccupants ?? null,
+        City__c: preferences.cities ?? null,
+        Neighbourhood__c: preferences.neighbourhoods ?? null,
+        Pet_Friendly__c: preferences.petFriendly
+      }
+    });
   }
   catch (error) {
-    console.log(error);
-    res.status(500).json({
-      result:false,
-      errorMessage: error.message || 'Unknown system error.  Please try again.'
+    const status = Number.isInteger(error.status) && error.status >= 400 && error.status <= 599
+      ? error.status
+      : 500;
+    res.status(status).json({
+      result: false,
+      errorMessage: error.errorMessage || error.message || 'Unknown system error.  Please try again.'
     })
   }
 

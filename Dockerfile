@@ -10,10 +10,9 @@ FROM node:18-alpine AS deps
 RUN apk add --no-cache libc6-compat git
 RUN apk --no-cache add --virtual .builds-deps build-base python3
 
-# salesforce-connect is declared as git+ssh:// and hollyburn-lib as github:.
-# Both repositories are public, so rewrite them to HTTPS and fetch them without
-# credentials. This is what replaced the salesforce-connect-deploy key file --
-# the key was gitignored, absent from the tree, and broke every build.
+# hollyburn-lib is declared as github:, which the lockfile records as git+ssh.
+# The repository is public, so rewrite SSH GitHub URLs to HTTPS and fetch
+# without credentials.
 RUN git config --global url."https://github.com/".insteadOf "ssh://git@github.com/" \
  && git config --global --add url."https://github.com/".insteadOf "git@github.com:"
 
